@@ -3,10 +3,10 @@
         "carro": "BYD Dolphin Mini GS",
         "imagem": "carrosimg\/byd-dolphin-mini.png",
         "origem": "Pinheiros",
-        "destino": "São Mateus",
-        "distancia_km": 71,
-        "situacao": "ok",
-        "data_hora": "25\/10\/2026 22:31",
-        "id": "sim_6ade8329e5baf4.94715092"
+        "destino": "Vila Velha",
+        "distancia_km": 291,
+        "situacao": "precisa_parar",
+        "data_hora": "26\/10\/2026 21:48",
+        "id": "sim_6adfca95ec3e58.86194496"
     }
 ]
