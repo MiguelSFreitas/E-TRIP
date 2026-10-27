@@ -3,9 +3,9 @@
  * historico.php
  *
  * Mostra as simulações salvas em historico.json como cards (imagem do
- * carro à esquerda, informações no meio, botão de excluir à direita).
- * Não tem login: qualquer um que acessar a página vê e pode apagar
- * itens do histórico — é um recurso simples, não uma área privada.
+ * carro à esquerda, informações no meio, botões de ação à direita).
+ * Não tem login: qualquer um que acessar a página vê, pode reabrir o
+ * resultado de uma simulação antiga ou apagar itens do histórico.
  */
 
 $arquivoHistorico = __DIR__ . '/historico.json';
@@ -91,7 +91,8 @@ $historico = lerHistorico($arquivoHistorico);
 
             <div class="grade-historico">
                 <?php foreach ($historico as $item): ?>
-                    <div class="historico-card">
+                    <?php $podeAbrir = isset($item['carro_id'], $item['percentual_saida'], $item['percentual_chegada']); ?>
+                    <div class="historico-card<?php echo $podeAbrir ? ' historico-card-clicavel' : ''; ?>">
 
                         <?php if (!empty($item['imagem'])): ?>
                             <img src="/<?php echo htmlspecialchars($item['imagem']); ?>" alt="<?php echo htmlspecialchars($item['carro']); ?>" class="historico-img">
@@ -109,12 +110,25 @@ $historico = lerHistorico($arquivoHistorico);
                             </span>
                         </div>
 
-                        <form method="post" action="historico.php" class="historico-excluir-form">
-                            <input type="hidden" name="excluir_id" value="<?php echo htmlspecialchars($item['id']); ?>">
-                            <button type="submit" class="botao-excluir" aria-label="Excluir esta simulação" title="Excluir">
-                                🗑
-                            </button>
-                        </form>
+                        <div class="historico-acoes">
+                            <?php if ($podeAbrir): ?>
+                                <!-- Form escondido: o clique na div inteira do card dispara este submit (ver tema.js/script no final da página) -->
+                                <form method="post" action="Resultado.php" class="historico-abrir-form">
+                                    <input type="hidden" name="carro_id" value="<?php echo htmlspecialchars($item['carro_id']); ?>">
+                                    <input type="hidden" name="origem" value="<?php echo htmlspecialchars($item['origem']); ?>">
+                                    <input type="hidden" name="destino" value="<?php echo htmlspecialchars($item['destino']); ?>">
+                                    <input type="hidden" name="percentual_saida" value="<?php echo htmlspecialchars($item['percentual_saida']); ?>">
+                                    <input type="hidden" name="percentual_chegada" value="<?php echo htmlspecialchars($item['percentual_chegada']); ?>">
+                                </form>
+                            <?php endif; ?>
+
+                            <form method="post" action="historico.php" class="historico-excluir-form" onclick="event.stopPropagation();">
+                                <input type="hidden" name="excluir_id" value="<?php echo htmlspecialchars($item['id']); ?>">
+                                <button type="submit" class="botao-excluir" aria-label="Excluir esta simulação" title="Excluir">
+                                    🗑
+                                </button>
+                            </form>
+                        </div>
 
                     </div>
                 <?php endforeach; ?>
@@ -129,6 +143,19 @@ $historico = lerHistorico($arquivoHistorico);
     </footer>
 
     <script src="/js/tema.js"></script>
+
+    <script>
+        // Clicar em qualquer lugar do card (exceto no botão de excluir, que já
+        // tem event.stopPropagation() no próprio form) abre o resultado de novo.
+        document.querySelectorAll('.historico-card-clicavel').forEach(function (card) {
+            card.addEventListener('click', function () {
+                const form = card.querySelector('.historico-abrir-form');
+                if (form) {
+                    form.submit();
+                }
+            });
+        });
+    </script>
 
 </body>
 

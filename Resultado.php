@@ -1,24 +1,26 @@
 <?php
 /**
- * Resultado.php (fica em public/)
+ * Resultado.php
  *
  * Recebe o formulário do index.php via POST, calcula se a bateria
- * aguenta a viagem e sugere onde recarregar, e já mostra o HTML do
- * resultado — tudo num arquivo só (lógica + funções + HTML juntos).
+ * aguenta a viagem e sugere onde recarregar. Já devolve o HTML da
+ * página de resultado — sem fetch/JSON.
  *
  * IMPORTANTE: o cálculo nunca assume que o carro pode chegar ao
  * destino "descarregado". Se a viagem gasta mais energia do que a
  * bateria TEM (mesmo sem reserva nenhuma), o sistema procura uma
- * parada numa cidade intermediária, dentro do alcance real do carro.
+ * parada numa cidade intermediária, dentro do alcance real do carro
+ * — nunca sugere recarregar só depois de já ter chegado ao destino
+ * se o carro não teria energia pra chegar lá.
  */
+
 require_once __DIR__ . '/backend/data/CarroModel.php';   // $carros, buscarCarroPorId()
 require_once __DIR__ . '/backend/data/CidadeModel.php';  // $cidades, $distancias, buscarDistancia()
 require_once __DIR__ . '/backend/data/PostoModel.php';   // $postos, buscarPostosPorCidade()
 
 
-
 // ------------------------------------------------------------
-// FUNÇÕES DE CÁLCULO
+// 1. FUNÇÕES DE CÁLCULO
 // ------------------------------------------------------------
 
 function calcularBateriaDisponivel($capacidadeBateriaKwh, $percentualSaida) {
@@ -37,6 +39,23 @@ function calcularCustoEstimado($energiaNecessariaKwh, $tarifaReaisKwh) {
     return round($energiaNecessariaKwh * $tarifaReaisKwh, 2);
 }
 
+/**
+ * Salva um registro no histórico de simulações (historico.json), sem
+ * precisar de login. Mantém só as últimas $limite simulações, mais
+ * recente primeiro.
+ */
+function salvarHistorico($registro, $limite = 20) {
+    $arquivo = __DIR__ . '/historico.json';
+    $historico = file_exists($arquivo) ? json_decode(file_get_contents($arquivo), true) : [];
+    if (!is_array($historico)) {
+        $historico = [];
+    }
+    $registro['id'] = uniqid('sim_', true); // id único, usado pra poder apagar o item depois
+    array_unshift($historico, $registro);
+    $historico = array_slice($historico, 0, $limite);
+    file_put_contents($arquivo, json_encode($historico, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
 function calcularTempoRecargaMinutos($energiaFaltanteKwh, $potenciaCarregadorKw) {
     if ($potenciaCarregadorKw <= 0) {
         return 0;
@@ -48,8 +67,9 @@ function calcularTempoRecargaMinutos($energiaFaltanteKwh, $potenciaCarregadorKw)
  * Calcula a viagem considerando 3 situações possíveis:
  *
  * 1. 'ok'                -> aguenta chegar com a reserva desejada ou mais
- * 2. 'chega_sem_reserva' -> o carro CONSEGUE chegar fisicamente ao destino,
- *                           só que abaixo da reserva que a pessoa queria
+ * 2. 'chega_sem_reserva' -> o carro CONSEGUE chegar fisicamente ao destino
+ *                           (não fica sem bateria no meio do caminho), só
+ *                           que chega abaixo da reserva que a pessoa queria
  * 3. 'precisa_parar'     -> o carro NÃO tem energia nem pra chegar ao
  *                           destino — precisa parar ANTES de chegar lá
  *
@@ -69,18 +89,21 @@ function calcularViagem($capacidadeBateriaKwh, $consumoMedioKwhKm, $percentualSa
         throw new Exception('Distância inválida.');
     }
 
-    $bateriaDisponivelKwh = calcularBateriaDisponivel($capacidadeBateriaKwh, $percentualSaida);
+    $bateriaDisponivelKwh = calcularBateriaDisponivel($capacidadeBateriaKwh, $percentualSaida); // tudo que tem, sem reserva
     $bateriaReservaKwh    = calcularBateriaReserva($capacidadeBateriaKwh, $percentualChegadaDesejado);
-    $bateriaUtilizavelKwh = $bateriaDisponivelKwh - $bateriaReservaKwh;
+    $bateriaUtilizavelKwh = $bateriaDisponivelKwh - $bateriaReservaKwh; // o que pode gastar respeitando a reserva
     $energiaNecessariaKwh = calcularEnergiaNecessaria($distanciaKm, $consumoMedioKwhKm);
 
+    // Até onde o carro consegue ir de verdade, mesmo descarregando tudo (sem reserva nenhuma)
     $distanciaMaximaKm = $consumoMedioKwhKm > 0 ? $bateriaDisponivelKwh / $consumoMedioKwhKm : 0;
 
     if ($energiaNecessariaKwh <= $bateriaUtilizavelKwh) {
         $situacao = 'ok';
     } elseif ($distanciaKm <= $distanciaMaximaKm) {
+        // Chega no destino, mas abaixo da reserva desejada — ainda assim CHEGA
         $situacao = 'chega_sem_reserva';
     } else {
+        // Não teria energia nem pra chegar — precisa parar antes
         $situacao = 'precisa_parar';
     }
 
@@ -118,6 +141,10 @@ function buscarRotaOuFalhar($origem, $destino, $distancias) {
     return $rota;
 }
 
+/**
+ * Escolhe o posto de maior potência numa cidade. Retorna null se não
+ * houver nenhum posto cadastrado ali.
+ */
 function melhorPostoDaCidade($cidade, $postos) {
     $postosCidade = buscarPostosPorCidade($cidade, $postos);
     if (empty($postosCidade)) {
@@ -127,6 +154,10 @@ function melhorPostoDaCidade($cidade, $postos) {
     return $postosCidade[0];
 }
 
+/**
+ * Retorna as cidades entre origem e destino, na ordem do trajeto
+ * (lista $cidades já está organizada norte -> sul pela BR-101).
+ */
 function cidadesIntermediarias($cidadeOrigem, $cidadeDestino, $cidades) {
     $idxOrigem = array_search($cidadeOrigem, $cidades);
     $idxDestino = array_search($cidadeDestino, $cidades);
@@ -139,6 +170,12 @@ function cidadesIntermediarias($cidadeOrigem, $cidadeDestino, $cidades) {
     return array_reverse(array_slice($cidades, $idxDestino + 1, $idxOrigem - $idxDestino - 1));
 }
 
+/**
+ * Procura, entre as cidades intermediárias, a mais distante da origem
+ * que ainda esteja dentro do alcance do carro E que tenha posto de
+ * recarga cadastrado. É a melhor parada possível: avança o máximo que
+ * dá antes de precisar recarregar.
+ */
 function encontrarParadaViavel($cidadeOrigem, $cidadeDestino, $distanciaMaximaKm, $cidades, $distancias, $postos) {
     $intermediarias = cidadesIntermediarias($cidadeOrigem, $cidadeDestino, $cidades);
     $melhorParada = null;
@@ -146,7 +183,7 @@ function encontrarParadaViavel($cidadeOrigem, $cidadeDestino, $distanciaMaximaKm
     foreach ($intermediarias as $cidade) {
         $rotaParcial = buscarDistancia($cidadeOrigem, $cidade, $distancias);
         if (!$rotaParcial || $rotaParcial['distancia_km'] > $distanciaMaximaKm) {
-            continue;
+            continue; // fora do alcance do carro a partir da origem
         }
         $posto = melhorPostoDaCidade($cidade, $postos);
         if ($posto) {
@@ -161,25 +198,9 @@ function encontrarParadaViavel($cidadeOrigem, $cidadeDestino, $distanciaMaximaKm
     return $melhorParada;
 }
 
-/**
- * Salva um registro no histórico de simulações (historico.json), sem
- * precisar de login. Mantém só as últimas $limite simulações.
- */
-function salvarHistorico($registro, $limite = 20) {
-    $arquivo = __DIR__ . '/../app/historico.json';
-    $historico = file_exists($arquivo) ? json_decode(file_get_contents($arquivo), true) : [];
-    if (!is_array($historico)) {
-        $historico = [];
-    }
-    $registro['id'] = uniqid('sim_', true);
-    array_unshift($historico, $registro);
-    $historico = array_slice($historico, 0, $limite);
-    file_put_contents($arquivo, json_encode($historico, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-}
-
 
 // ------------------------------------------------------------
-// RECEBE OS DADOS DO FORMULÁRIO E FAZ O CÁLCULO
+// 2. RECEBE OS DADOS DO FORMULÁRIO E FAZ O CÁLCULO
 // ------------------------------------------------------------
 
 $erro = null;
@@ -220,6 +241,8 @@ try {
     $resultado['custo_estimado'] = calcularCustoEstimado($resultado['energia_necessaria_kwh'], $tarifaReaisKwh);
 
     if ($resultado['situacao'] === 'chega_sem_reserva') {
+        // O carro CHEGA ao destino, só que abaixo da reserva desejada.
+        // Faz sentido sugerir recarregar lá.
         $postoSugerido = melhorPostoDaCidade($cidadeDestino, $postos);
         if (!$postoSugerido) {
             $postoSugerido = melhorPostoDaCidade($cidadeOrigem, $postos);
@@ -231,6 +254,8 @@ try {
             );
         }
     } elseif ($resultado['situacao'] === 'precisa_parar') {
+        // O carro NÃO teria energia pra chegar ao destino.
+        // Precisa de parada antes, dentro do alcance real dele.
         $paradaIntermediaria = encontrarParadaViavel(
             $cidadeOrigem,
             $cidadeDestino,
@@ -240,6 +265,8 @@ try {
             $postos
         );
 
+        // Se nem a primeira cidade no caminho tem posto dentro do alcance,
+        // a saída é recarregar mais ANTES de sair, na própria cidade de origem.
         if (!$paradaIntermediaria) {
             $postoNaOrigem = melhorPostoDaCidade($cidadeOrigem, $postos);
         }
@@ -254,7 +281,7 @@ try {
         'situacao' => $resultado['situacao'],
         'data_hora' => date('d/m/Y H:i'),
         // Dados de entrada guardados pra poder reabrir esse mesmo resultado
-        // depois, reenviando pro próprio Resultado.php (ver Historico.php).
+        // depois, reenviando pro próprio Resultado.php (ver botão no historico.php).
         'carro_id' => $carroId,
         'percentual_saida' => $percentualSaida,
         'percentual_chegada' => $percentualChegadaDesejado,
@@ -304,9 +331,7 @@ try {
                 </div>
             </section>
 
-        <?php
-        else:
-        ?>
+        <?php else: ?>
 
             <section class="camada">
                 <header class="camada-topo">

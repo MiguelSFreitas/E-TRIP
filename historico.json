@@ -1,12 +1,12 @@
 [
     {
-        "carro": "BYD Dolphin Mini GS",
-        "imagem": "carrosimg\/byd-dolphin-mini.png",
+        "carro": "GAC Aion UT Premium",
+        "imagem": "carrosimg\/gac-aion-ut.png",
         "origem": "Pinheiros",
-        "destino": "Vila Velha",
-        "distancia_km": 291,
-        "situacao": "precisa_parar",
-        "data_hora": "26\/10\/2026 21:48",
-        "id": "sim_6adfca95ec3e58.86194496"
+        "destino": "São Mateus",
+        "distancia_km": 71,
+        "situacao": "ok",
+        "data_hora": "27\/10\/2026 20:53",
+        "id": "sim_6ae10f3bb410e2.96338833"
     }
 ]

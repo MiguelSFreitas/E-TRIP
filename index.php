@@ -41,7 +41,7 @@ require_once __DIR__ . '/backend/data/CidadeModel.php';  // gera $cidades
             <li><a href="index.php" class="ativo">Início</a></li>
             <li><a href="#viagem">Calcular viagem</a></li>
             <li><a href="historico.php">Histórico</a></li>
-            <li><a href="#">Contato</a></li>
+          
         </ul>
         <button type="button" id="toggle-tema" class="botao-tema" aria-label="Alternar modo escuro" title="Alternar modo escuro">🌙</button>
     </nav>
