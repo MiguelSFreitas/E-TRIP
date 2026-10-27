@@ -8,7 +8,7 @@
  * (Resultado.php, index.php) precisa mudar, só este aqui.
  */
 
-require_once __DIR__ . '/conexao.php';
+require_once __DIR__ . '/Query.php';
 
 /**
  * Busca um carro pelo ID.

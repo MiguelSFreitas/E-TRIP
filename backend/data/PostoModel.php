@@ -7,7 +7,7 @@
  * arquivo do projeto precisa mudar.
  */
 
-require_once __DIR__ . '/conexao.php';
+require_once __DIR__ . '/Query.php';
 
 /**
  * Busca todos os postos cadastrados numa cidade específica.
