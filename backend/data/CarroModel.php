@@ -1,118 +1,62 @@
 <?php
+/**
+ * CarroModel.php
+ *
+ * Model: busca os dados dos carros no banco MySQL.
+ * As funções têm o MESMO nome e MESMA assinatura de antes (quando os
+ * dados vinham de array) — por isso nenhum outro arquivo do projeto
+ * (Resultado.php, index.php) precisa mudar, só este aqui.
+ */
 
-$carros = [
-    [
-        'id' => 1,
-        'marca' => 'BYD',
-        'modelo' => 'Dolphin Mini',
-        'versao' => 'GS',
-        'bateria_kwh' => 38.0,       // capacidade total da bateria
-        'consumo_kwh_km' => 0.136,   // consumo médio (kWh por km)
-        'autonomia_km' => 280,       // autonomia divulgada pelo fabricante
-        'caminho_imagem' => 'carrosimg/byd-dolphin-mini.png',
-        ],   
-    [
-        'id' => 2,
-        'marca' => 'BYD',
-        'modelo' => 'Dolphin Mini',
-        'versao' => 'GL',
-        'bateria_kwh' => 30.08,
-        'consumo_kwh_km' => 0.096,
-        'autonomia_km' => 224,
-        'caminho_imagem' => 'carrosimg/byd-dolphin-mini.png',
-    ],
-    [
-        'id' => 3,
-        'marca' => 'BYD',
-        'modelo' => 'Dolphin',
-        'versao' => 'GS',
-        'bateria_kwh' => 44.9,
-        'consumo_kwh_km' => 0.154,
-        'autonomia_km' => 291,
-        'caminho_imagem' => 'carrosimg/byd-dolphin.png',
-    ],
-    [
-        'id' => 4,
-        'marca' => 'Geely',
-        'modelo' => 'EX2',
-        'versao' => 'Pro',
-        'bateria_kwh' => 39.4,
-        'consumo_kwh_km' => 0.136,
-        'autonomia_km' => 289,
-        'caminho_imagem' => 'carrosimg/geely-ex2.png'
-    ],
-    [
-        'id' => 5,
-        'marca' => 'Geely',
-        'modelo' => 'EX2',
-        'versao' => 'Max',
-        'bateria_kwh' => 39.4,
-        'consumo_kwh_km' => 0.136,
-        'autonomia_km' => 289,
-        'caminho_imagem' => 'carrosimg/geely-ex2.png'
-    ],
-    [
-        'id' => 6,
-        'marca' => 'Chevrolet',
-        'modelo' => 'Spark EUV',
-        'versao' => 'Padrão',
-        'bateria_kwh' => 42.0,
-        'consumo_kwh_km' => 0.163,
-        'autonomia_km' => 258,
-        'caminho_imagem' => 'carrosimg/chevrolet-spark-euv.png'
-    ],
-    [
-        'id' => 7,
-        'marca' => 'BYD',
-        'modelo' => 'Yuan Pro',
-        'versao' => 'Padrão',
-        'bateria_kwh' => 45.1,
-        'consumo_kwh_km' => 0.135,
-        'autonomia_km' => 250,
-        'caminho_imagem' => 'carrosimg/byd-yuan-pro.png'
+require_once __DIR__ . '/conexao.php';
 
-    ],
-    [
-        'id' => 8,
-        'marca' => 'GAC',
-        'modelo' => 'Aion UT',
-        'versao' => 'Premium',
-        'bateria_kwh' => 44.12,      // LFP — fonte: canalve.com.br, agazeta.com.br, instacarro.com
-        'consumo_kwh_km' => 0.174,   // calculado: 44.12 ÷ 253
-        'autonomia_km' => 253,       // Inmetro — fonte: canalve.com.br, agazeta.com.br, instacarro.com
-        'caminho_imagem' => 'carrosimg/gac-aion-ut.png',
-    ],
-    [
-    'id' => 9,
-    'marca' => 'GAC',
-    'modelo' => 'Aion UT',
-    'versao' => 'Elite',
-    'bateria_kwh' => 60.0,       // LFP — fonte: canalve.com.br, agazeta.com.br, instacarro.com
-    'consumo_kwh_km' => 0.194,   // calculado: 60.0 ÷ 310
-    'autonomia_km' => 310,       // Inmetro — fonte: canalve.com.br, agazeta.com.br, instacarro.com
-    'caminho_imagem' => 'carrosimg/gac-aion-ut.png',
-],
- 
-];
-
-function buscarCarroPorId($carroId, $carros) {
-    foreach ($carros as $c) {
-        if ($c['id'] == $carroId) {
-            return $c;
-        }
-    }
-    return null;
+/**
+ * Busca um carro pelo ID.
+ * Retorna null se o carro não existir.
+ *
+ * O segundo parâmetro ($carros) não é mais usado — existe só pra
+ * manter a mesma assinatura da versão antiga (array), então quem
+ * chama essa função não precisa mudar nada.
+ */
+function buscarCarroPorId($carroId, $carros = null) {
+    $pdo = conectarBanco();
+    $stmt = $pdo->prepare('SELECT * FROM carros WHERE id = ?');
+    $stmt->execute([$carroId]);
+    $carro = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $carro ?: null;
 }
 
-
-
-function listarMarcas($carros) {
-    $marcas = array_unique(array_column($carros, 'marca'));
-    sort($marcas);
-    return array_values($marcas);
+/**
+ * Retorna a lista de marcas únicas, em ordem alfabética.
+ */
+function listarMarcas($carros = null) {
+    $pdo = conectarBanco();
+    $stmt = $pdo->query('SELECT DISTINCT marca FROM carros ORDER BY marca');
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
-
-function listarModelosPorMarca($marca, $carros) {
-    return array_values(array_filter($carros, fn($c) => $c['marca'] === $marca));
+/**
+ * Retorna os carros de uma marca específica.
+ */
+function listarModelosPorMarca($marca, $carros = null) {
+    $pdo = conectarBanco();
+    $stmt = $pdo->prepare('SELECT * FROM carros WHERE marca = ?');
+    $stmt->execute([$marca]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+/**
+ * Retorna TODOS os carros cadastrados.
+ * Usada pelo index.php pra montar o select e pra exportar em JSON
+ * pro selects.js filtrar modelo/versão no navegador.
+ */
+function listarTodosCarros() {
+    $pdo = conectarBanco();
+    $stmt = $pdo->query('SELECT * FROM carros ORDER BY marca, modelo, versao');
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Mantém a variável $carros disponível pra quem ainda usa esse nome
+// direto (ex: index.php fazia `foreach ($carros as $carro)`), assim
+// não precisa trocar require_once nem lógica nenhuma lá.
+$carros = listarTodosCarros();

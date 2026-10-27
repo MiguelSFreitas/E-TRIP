@@ -1,6 +1,45 @@
 [
     {
         "carro": "GAC Aion UT Premium",
+        "imagem": "",
+        "origem": "Pinheiros",
+        "destino": "Vitória",
+        "distancia_km": 291,
+        "situacao": "precisa_parar",
+        "data_hora": "27\/10\/2026 21:24",
+        "carro_id": 8,
+        "percentual_saida": 36,
+        "percentual_chegada": 20,
+        "id": "sim_6ae1167e1ce645.47696677"
+    },
+    {
+        "carro": "GAC Aion UT Premium",
+        "imagem": "",
+        "origem": "Pinheiros",
+        "destino": "Vitória",
+        "distancia_km": 291,
+        "situacao": "precisa_parar",
+        "data_hora": "27\/10\/2026 21:22",
+        "carro_id": 8,
+        "percentual_saida": 36,
+        "percentual_chegada": 20,
+        "id": "sim_6ae116203ac918.52307267"
+    },
+    {
+        "carro": "BYD Dolphin GS",
+        "imagem": "",
+        "origem": "Pinheiros",
+        "destino": "São Mateus",
+        "distancia_km": 71,
+        "situacao": "ok",
+        "data_hora": "27\/10\/2026 21:19",
+        "carro_id": 3,
+        "percentual_saida": 80,
+        "percentual_chegada": 20,
+        "id": "sim_6ae115798f4414.78237776"
+    },
+    {
+        "carro": "GAC Aion UT Premium",
         "imagem": "carrosimg\/gac-aion-ut.png",
         "origem": "Pinheiros",
         "destino": "São Mateus",
