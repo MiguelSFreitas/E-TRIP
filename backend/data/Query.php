@@ -1,6 +1,6 @@
 <?php
 /**
- * conexao.php
+ * Query.php
  *
  * Abre (e devolve) a conexão PDO com o banco MySQL do ETRIP.
  * Ajuste $usuario e $senha conforme o ambiente (no XAMPP padrão,
