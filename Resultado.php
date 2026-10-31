@@ -14,9 +14,13 @@
  * se o carro não teria energia pra chegar lá.
  */
 
+require_once __DIR__ . '/auth.php';
+exigirLogin(); // sem conta, não calcula — redireciona pro login.php
+
 require_once __DIR__ . '/backend/data/CarroModel.php';   // $carros, buscarCarroPorId()
 require_once __DIR__ . '/backend/data/CidadeModel.php';  // $cidades, $distancias, buscarDistancia()
 require_once __DIR__ . '/backend/data/PostoModel.php';   // $postos, buscarPostosPorCidade()
+require_once __DIR__ . '/backend/data/Query.php';      // conectarBanco()
 
 
 // ------------------------------------------------------------
@@ -40,20 +44,28 @@ function calcularCustoEstimado($energiaNecessariaKwh, $tarifaReaisKwh) {
 }
 
 /**
- * Salva um registro no histórico de simulações (historico.json), sem
- * precisar de login. Mantém só as últimas $limite simulações, mais
- * recente primeiro.
+ * Salva um registro no histórico de simulações, na tabela MySQL
+ * historico_simulacoes, vinculado ao usuário que está logado.
  */
-function salvarHistorico($registro, $limite = 20) {
-    $arquivo = __DIR__ . '/historico.json';
-    $historico = file_exists($arquivo) ? json_decode(file_get_contents($arquivo), true) : [];
-    if (!is_array($historico)) {
-        $historico = [];
-    }
-    $registro['id'] = uniqid('sim_', true); // id único, usado pra poder apagar o item depois
-    array_unshift($historico, $registro);
-    $historico = array_slice($historico, 0, $limite);
-    file_put_contents($arquivo, json_encode($historico, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+function salvarHistorico($registro) {
+    $pdo = conectarBanco();
+    $stmt = $pdo->prepare(
+        'INSERT INTO historico_simulacoes
+            (usuario_id, carro, imagem, origem, destino, distancia_km, situacao, carro_id, percentual_saida, percentual_chegada)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([
+        idUsuarioLogado(),
+        $registro['carro'],
+        $registro['imagem'],
+        $registro['origem'],
+        $registro['destino'],
+        $registro['distancia_km'],
+        $registro['situacao'],
+        $registro['carro_id'],
+        $registro['percentual_saida'],
+        $registro['percentual_chegada'],
+    ]);
 }
 
 function calcularTempoRecargaMinutos($energiaFaltanteKwh, $potenciaCarregadorKw) {
@@ -317,6 +329,10 @@ try {
             <li><a href="index.php#viagem">Nova simulação</a></li>
             <li><a href="historico.php">Histórico</a></li>
         </ul>
+        <div class="usuario-info">
+            <span>Olá, <?php echo htmlspecialchars(nomeUsuarioLogado()); ?></span>
+            <a href="logout.php">Sair</a>
+        </div>
         <button type="button" id="toggle-tema" class="botao-tema" aria-label="Alternar modo escuro" title="Alternar modo escuro">🌙</button>
     </nav>
 

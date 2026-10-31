@@ -757,3 +757,56 @@ button:disabled::after {
         scroll-behavior: auto !important;
     }
 }
+
+/* ===== LOGIN / CADASTRO ===== */
+/* Cole este bloco no final do style.css já existente */
+
+form .campo {
+    margin-bottom: 16px;
+}
+
+form input[type="text"],
+form input[type="email"],
+form input[type="password"] {
+    width: 100%;
+    margin-top: 8px;
+    padding: 13px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--azul-noite);
+    background-color: var(--ceu);
+    border-radius: 12px;
+    outline: none;
+    transition: box-shadow .25s;
+}
+
+form input[type="text"]:focus,
+form input[type="email"]:focus,
+form input[type="password"]:focus {
+    box-shadow: inset 0 0 0 2px var(--azul);
+}
+
+.usuario-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gelo);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.usuario-info a {
+    color: var(--gelo);
+    text-decoration: underline;
+}
+
+.usuario-info a:hover {
+    color: var(--branco);
+}
+
+:root[data-theme="dark"] form input[type="text"],
+:root[data-theme="dark"] form input[type="email"],
+:root[data-theme="dark"] form input[type="password"] {
+    background-color: #0f1d33;
+    color: #eef3fb;
+}
